@@ -1,8 +1,16 @@
 import "dotenv/config";
-import { Client, Collection, GatewayIntentBits, MessageFlags } from "discord.js";
+import {
+  Client,
+  Collection,
+  DiscordAPIError,
+  GatewayIntentBits,
+  MessageFlags,
+  RESTJSONErrorCodes,
+} from "discord.js";
 import { commands } from "./commands";
 import { antiSpamService } from "./services/anti-spam";
 import { handlePollButton } from "./services/poll";
+import { getGoodbyeMessage, getWelcomeMessage } from "./personality";
 
 const token = process.env.DISCORD_TOKEN;
 
@@ -25,7 +33,7 @@ for (const command of commands) {
 }
 
 client.once("clientReady", (client) => {
-  console.log(`🦌 Noko is ready as ${client.user.tag}`);
+  console.log(`🦌 Nun! Noko is ready as ${client.user.tag}`);
 });
 
 client.on("error", (error) => {
@@ -57,24 +65,52 @@ client.on("interactionCreate", async (interaction) => {
 
     await command.execute(interaction);
   } catch (error) {
-    console.error("Gagal memproses interaksi:", error);
+    const cmdName = interaction.isChatInputCommand()
+      ? `/${interaction.commandName}`
+      : interaction.isButton()
+        ? `button:${interaction.customId}`
+        : "interaksi";
 
     if (
-      !interaction.isRepliable() ||
-      interaction.replied ||
-      interaction.deferred
+      error instanceof DiscordAPIError &&
+      (error.code === RESTJSONErrorCodes.InteractionHasAlreadyBeenAcknowledged ||
+        error.code === RESTJSONErrorCodes.UnknownInteraction)
     ) {
+      console.warn(
+        `[Interaksi Diabaikan] ${cmdName} sudah di-acknowledge atau kedaluwarsa (${error.code}).`,
+      );
       return;
     }
 
-    await interaction
-      .reply({
-        content: "❌ Terjadi kesalahan saat menjalankan perintah ini.",
-        flags: MessageFlags.Ephemeral,
-      })
-      .catch((replyError) => {
+    console.error(`Gagal memproses interaksi (${cmdName}):`, error);
+
+    if (!interaction.isRepliable()) {
+      return;
+    }
+
+    try {
+      if (interaction.deferred && !interaction.replied) {
+        await interaction.editReply({
+          content: "❌ Terjadi kesalahan saat menjalankan perintah ini.",
+        });
+      } else if (!interaction.replied) {
+        await interaction.reply({
+          content: "❌ Terjadi kesalahan saat menjalankan perintah ini.",
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+    } catch (replyError) {
+      if (
+        !(
+          replyError instanceof DiscordAPIError &&
+          (replyError.code ===
+            RESTJSONErrorCodes.InteractionHasAlreadyBeenAcknowledged ||
+            replyError.code === RESTJSONErrorCodes.UnknownInteraction)
+        )
+      ) {
         console.error("Gagal mengirim respons error interaksi:", replyError);
-      });
+      }
+    }
   }
 });
 
@@ -98,11 +134,13 @@ client.on("guildMemberAdd", async (member) => {
         const roleMention = roleId ? `<@&${roleId}>` : "**Warga PKH**";
 
         await channel.send({
-          content:
-            `👋 Selamat datang ${member} di **${member.guild.name}**!\n\n` +
-            `📜 Jangan lupa baca peraturan di <#${rulesChannelId}>.\n` +
-            `📝 Silakan buka channel pendaftaran <#${registrationChannelId}> agar bisa mendapatkan role ${roleMention}.\n\n` +
-            `💻 Semoga betah dan selamat bergabung di PKH! 🦌`,
+          content: getWelcomeMessage(
+            `${member}`,
+            member.guild.name,
+            rulesChannelId,
+            registrationChannelId,
+            roleMention,
+          ),
           allowedMentions: { parse: [], users: [member.id] },
         });
       }
@@ -127,9 +165,7 @@ client.on("guildMemberRemove", async (member) => {
     }
 
     await channel.send({
-      content:
-        `👋 **${member.user.username}** telah meninggalkan **${member.guild.name}**.\n` +
-        `Semoga sukses dan sampai jumpa kembali! 🦌`,
+      content: getGoodbyeMessage(member.user.username, member.guild.name),
       allowedMentions: { parse: [] },
     });
   } catch (error) {

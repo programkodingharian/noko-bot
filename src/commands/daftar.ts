@@ -5,6 +5,10 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from "discord.js";
+import {
+  getDaftarAlreadyRegisteredMessage,
+  getDaftarSuccessMessage,
+} from "../personality";
 
 export const data = new SlashCommandBuilder()
   .setName("daftar")
@@ -68,7 +72,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   if (member.roles.cache.has(role.id)) {
     await interaction.reply({
-      content: "Kamu sudah menjadi **Warga PKH**. Tidak perlu melakukan pendaftaran ulang.",
+      content: getDaftarAlreadyRegisteredMessage(),
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -99,9 +103,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     await member.roles.add(role);
 
     await interaction.reply({
-      content:
-        "**Pendaftaran berhasil! 🎉**\n\n" +
-        "Kamu sekarang resmi menjadi **Warga PKH**. Selamat bergabung di Program Koding Harian!",
+      content: getDaftarSuccessMessage(),
       flags: MessageFlags.Ephemeral,
     });
   } catch (error) {

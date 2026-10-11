@@ -2,6 +2,7 @@ import {
   ChatInputCommandInteraction,
   SlashCommandBuilder,
 } from "discord.js";
+import { getRulesFooter } from "../personality";
 
 export const data = new SlashCommandBuilder()
   .setName("rules")
@@ -20,7 +21,7 @@ export async function execute(
       "4. 💻 Gunakan channel sesuai topik.",
       "5. 🦌 Ikuti arahan moderator dan Discord ToS.",
       "",
-      "Dengan berada di server ini, kamu dianggap telah menyetujui peraturan yang berlaku.",
+      getRulesFooter(),
     ].join("\n"),
   });
 }

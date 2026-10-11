@@ -3,6 +3,10 @@ import {
   MessageFlags,
   SlashCommandBuilder,
 } from "discord.js";
+import {
+  getRemindConfirmation,
+  getRemindNotification,
+} from "../personality";
 
 const MAX_MESSAGE_LENGTH = 1000;
 
@@ -56,14 +60,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   }
 
   await interaction.reply({
-    content: `⏰ Pengingat berhasil dibuat! Noko akan mengingatkanmu dalam ${duration} menit.`,
+    content: getRemindConfirmation(duration),
     flags: MessageFlags.Ephemeral,
   });
 
   setTimeout(async () => {
     try {
       await channel.send({
-        content: `⏰ <@${interaction.user.id}> Pengingatmu:\n${message}`,
+        content: getRemindNotification(interaction.user.id, message),
         allowedMentions: {
           users: [interaction.user.id],
         },

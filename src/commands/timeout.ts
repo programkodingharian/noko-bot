@@ -10,6 +10,7 @@ import {
   resolveModerationTarget,
   sendModLog,
 } from "../services/mod-log";
+import { formatModerationAction } from "../personality";
 
 const MAX_TIMEOUT_MINUTES = 28 * 24 * 60;
 
@@ -84,9 +85,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   });
 
   await interaction.reply({
-    content:
-      `⏱️ **${targetMember.displayName}** telah di-timeout selama **${duration} menit**.\n` +
-      `**Alasan:** ${reason}`,
+    content: formatModerationAction(
+      "timeout",
+      targetMember.displayName,
+      reason,
+      duration,
+    ),
     allowedMentions: { parse: [] },
   });
 }

@@ -10,6 +10,7 @@ import {
   resolveModerationTarget,
   sendModLog,
 } from "../services/mod-log";
+import { formatModerationAction } from "../personality";
 
 export const data = new SlashCommandBuilder()
   .setName("kick")
@@ -71,7 +72,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   });
 
   await interaction.reply({
-    content: `👢 **${targetMember.displayName}** telah dikeluarkan.\n**Alasan:** ${reason}`,
+    content: formatModerationAction("kick", targetMember.displayName, reason),
     allowedMentions: { parse: [] },
   });
 }

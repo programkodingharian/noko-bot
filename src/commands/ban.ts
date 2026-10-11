@@ -10,6 +10,7 @@ import {
   resolveModerationTarget,
   sendModLog,
 } from "../services/mod-log";
+import { formatModerationAction } from "../personality";
 
 export const data = new SlashCommandBuilder()
   .setName("ban")
@@ -71,7 +72,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   });
 
   await interaction.reply({
-    content: `🔨 **${targetMember.displayName}** telah di-ban.\n**Alasan:** ${reason}`,
+    content: formatModerationAction("ban", targetMember.displayName, reason),
     allowedMentions: { parse: [] },
   });
 }

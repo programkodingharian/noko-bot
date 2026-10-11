@@ -6,6 +6,7 @@ import {
   SlashCommandBuilder,
   TextChannel,
 } from "discord.js";
+import { getProjectSuccessMessage } from "../personality";
 
 export const MAX_NAME_LENGTH = 150;
 export const MAX_DESCRIPTION_LENGTH = 1000;
@@ -244,6 +245,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   await replyEphemeral(
     interaction,
-    `✅ Proyek **${nama}** berhasil dikirim ke ${channel}.`,
+    getProjectSuccessMessage(nama, `${channel}`),
   );
 }

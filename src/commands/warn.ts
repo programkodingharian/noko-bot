@@ -10,6 +10,7 @@ import {
   resolveModerationTarget,
   sendModLog,
 } from "../services/mod-log";
+import { formatModerationAction } from "../personality";
 
 export const data = new SlashCommandBuilder()
   .setName("warn")
@@ -61,9 +62,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   });
 
   await interaction.reply({
-    content:
-      `⚠️ **${targetMember.displayName}** telah mendapatkan peringatan.\n` +
-      `**Alasan:** ${reason}`,
+    content: formatModerationAction("warn", targetMember.displayName, reason),
     allowedMentions: { parse: [] },
   });
 }

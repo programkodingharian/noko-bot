@@ -4,6 +4,7 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from "discord.js";
+import { getHelpHeader } from "../personality";
 
 export const data = new SlashCommandBuilder()
   .setName("help")
@@ -13,7 +14,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const permissions = interaction.memberPermissions;
 
   const content = [
-    "🦌 **Noko — PKH Community Bot**",
+    getHelpHeader(),
     "",
     "👤 **Perintah Member**",
     "`/help` — Menampilkan bantuan",

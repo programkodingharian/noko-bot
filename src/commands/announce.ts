@@ -7,6 +7,7 @@ import {
   SlashCommandBuilder,
   TextChannel,
 } from "discord.js";
+import { getAnnounceSuccessMessage } from "../personality";
 
 const MAX_TITLE_LENGTH = 256;
 const MAX_MESSAGE_LENGTH = 4000;
@@ -124,7 +125,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   }
 
   await interaction.reply({
-    content: `✅ Pengumuman berhasil dikirim ke ${channel}.`,
+    content: getAnnounceSuccessMessage(`${channel}`),
     flags: MessageFlags.Ephemeral,
   });
 }

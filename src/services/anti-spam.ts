@@ -9,6 +9,12 @@ import {
   RESTJSONErrorCodes,
 } from "discord.js";
 import { sendModLog } from "./mod-log";
+import {
+  formatRateLimitMessage,
+  formatSpamChannelAlert,
+  formatSpamTimeoutMessage,
+  formatSpamWarningMessage,
+} from "../personality";
 
 export interface AntiSpamConfig {
   // Message Flooding
@@ -505,9 +511,11 @@ export class AntiSpamService {
 
       // Send ephemeral or auto-deleting warning in channel
       if (message.channel && "send" in message.channel) {
-        const text = escalation.isWarning
-          ? `⚠️ ${message.author}, mohon jangan melakukan spam di server PKH.`
-          : `⛔ ${message.author} telah dikenakan timeout selama **${escalation.durationText}** karena spam.`;
+        const text = formatSpamChannelAlert(
+          `${message.author}`,
+          escalation.isWarning,
+          escalation.durationText,
+        );
 
         const alertMsg = await message.channel
           .send({
@@ -535,19 +543,27 @@ export class AntiSpamService {
       return { allowed: true };
     }
 
-    const member =
-      interaction.member instanceof GuildMember
-        ? interaction.member
-        : await interaction.guild.members
-            .fetch(interaction.user.id)
-            .catch(() => null);
-
-    if (this.isExempt(member)) {
+    // Cek exemption langsung via memberPermissions tanpa REST round-trip (0ms latency)
+    if (
+      interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) ||
+      interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)
+    ) {
       return { allowed: true };
     }
 
-    // Check if member is already timed out
-    if (member && this.isMemberTimedOut(member)) {
+    // Cek status timeout langsung jika tersedia
+    const timeoutUntil =
+      interaction.member instanceof GuildMember
+        ? interaction.member.communicationDisabledUntilTimestamp
+        : (interaction.member as { communication_disabled_until?: string | null })
+            ?.communication_disabled_until
+          ? new Date(
+              (interaction.member as { communication_disabled_until: string })
+                .communication_disabled_until,
+            ).getTime()
+          : null;
+
+    if (timeoutUntil && timeoutUntil > Date.now()) {
       if (!interaction.replied && !interaction.deferred) {
         await interaction
           .reply({
@@ -569,6 +585,13 @@ export class AntiSpamService {
         return { allowed: true };
       }
 
+      const member =
+        interaction.member instanceof GuildMember
+          ? interaction.member
+          : await interaction.guild?.members
+              .fetch(interaction.user.id)
+              .catch(() => null) ?? null;
+
       if (evalResult.isSpamViolation && member) {
         const escalation = await this.applyPunishment(
           member,
@@ -578,8 +601,8 @@ export class AntiSpamService {
         );
 
         const responseContent = escalation.isWarning
-          ? "⚠️ Peringatan: Kamu terdeteksi melakukan spam command secara berlebihan. Harap hentikan atau akunmu akan dikenakan timeout."
-          : `⛔ Kamu telah dikenakan timeout selama **${escalation.durationText}** karena melakukan spam command secara berulang.`;
+          ? formatSpamWarningMessage()
+          : formatSpamTimeoutMessage(escalation.durationText);
 
         if (!interaction.replied && !interaction.deferred) {
           await interaction
@@ -594,7 +617,7 @@ export class AntiSpamService {
       }
 
       // Normal rate limit cooldown (not a severe spam violation)
-      const cooldownMsg = `⏳ Mohon tunggu **${evalResult.retryAfter} detik** sebelum menggunakan command ini lagi.`;
+      const cooldownMsg = formatRateLimitMessage(evalResult.retryAfter ?? 0);
 
       if (!interaction.replied && !interaction.deferred) {
         await interaction
