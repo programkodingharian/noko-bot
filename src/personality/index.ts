@@ -225,3 +225,17 @@ export function formatSpamChannelAlert(
   }
   return `⛔ ${userMention} telah dikenakan timeout selama **${durationText ?? "beberapa saat"}** karena spam.`;
 }
+
+/**
+ * Peringatan pesan teks biasa di channel pendaftaran
+ */
+export function getRegistrationChannelAlertMessage(userMention: string): string {
+  return `⚠️ Halo ${userMention}, channel ini khusus pendaftaran via slash command \`/daftar\`. Obrolan teks biasa tidak diperbolehkan ya~ 🦌`;
+}
+
+/**
+ * Peringatan slash command selain /daftar di channel pendaftaran
+ */
+export function getRegistrationChannelCommandDeniedMessage(): string {
+  return "⚠️ Di channel pendaftaran, kamu hanya bisa menggunakan perintah `/daftar`. Silakan gunakan channel lain untuk perintah ini ya~ 🦌";
+}

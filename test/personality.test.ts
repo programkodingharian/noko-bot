@@ -15,6 +15,8 @@ import {
   getGoodbyeMessage,
   getHelpHeader,
   getProjectSuccessMessage,
+  getRegistrationChannelAlertMessage,
+  getRegistrationChannelCommandDeniedMessage,
   getRemindConfirmation,
   getRemindNotification,
   getRulesFooter,
@@ -170,5 +172,14 @@ describe("Nokotan Personality Module", () => {
     const alertTimeout = formatSpamChannelAlert("<@user>", false, "1 menit");
     expect(alertTimeout).toContain("<@user>");
     expect(alertTimeout).toContain("1 menit");
+  });
+
+  it("harus memformat pesan peringatan channel pendaftaran dengan baik", () => {
+    const alert = getRegistrationChannelAlertMessage("<@123>");
+    expect(alert).toContain("<@123>");
+    expect(alert).toContain("/daftar");
+
+    const denied = getRegistrationChannelCommandDeniedMessage();
+    expect(denied).toContain("/daftar");
   });
 });

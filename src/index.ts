@@ -5,12 +5,18 @@ import {
   DiscordAPIError,
   GatewayIntentBits,
   MessageFlags,
+  PermissionFlagsBits,
   RESTJSONErrorCodes,
 } from "discord.js";
 import { commands } from "./commands";
 import { antiSpamService } from "./services/anti-spam";
 import { handlePollButton } from "./services/poll";
-import { getGoodbyeMessage, getWelcomeMessage } from "./personality";
+import {
+  getGoodbyeMessage,
+  getRegistrationChannelAlertMessage,
+  getRegistrationChannelCommandDeniedMessage,
+  getWelcomeMessage,
+} from "./personality";
 
 const token = process.env.DISCORD_TOKEN;
 
@@ -55,6 +61,28 @@ client.on("interactionCreate", async (interaction) => {
 
     if (!command) {
       return;
+    }
+
+    const registrationChannelId =
+      process.env.REGISTRATION_CHANNEL_ID?.trim() || "1557675408537813064";
+
+    // Di channel pendaftaran, hanya command /daftar yang diizinkan (kecuali admin/moderator server)
+    if (
+      registrationChannelId &&
+      interaction.channelId === registrationChannelId &&
+      interaction.commandName !== "daftar"
+    ) {
+      const isStaff =
+        interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) ||
+        interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild);
+
+      if (!isStaff) {
+        await interaction.reply({
+          content: getRegistrationChannelCommandDeniedMessage(),
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
     }
 
     const spamCheck = await antiSpamService.handleCommand(interaction);
@@ -175,9 +203,45 @@ client.on("guildMemberRemove", async (member) => {
 
 client.on("messageCreate", async (message) => {
   try {
+    if (message.author.bot) {
+      return;
+    }
+
+    const registrationChannelId =
+      process.env.REGISTRATION_CHANNEL_ID?.trim() || "1557675408537813064";
+
+    // Filter khusus channel pendaftaran: tolak/hapus semua pesan teks biasa
+    if (registrationChannelId && message.channelId === registrationChannelId) {
+      const isStaff =
+        message.member?.permissions.has(PermissionFlagsBits.Administrator) ||
+        message.member?.permissions.has(PermissionFlagsBits.ManageGuild);
+
+      if (!isStaff) {
+        // Hapus pesan teks biasa yang bukan slash command
+        await message.delete().catch(() => {});
+
+        // Kirim peringatan sementara lalu hapus otomatis setelah 5 detik
+        if (message.channel && "send" in message.channel) {
+          const alertMsg = await message.channel
+            .send({
+              content: getRegistrationChannelAlertMessage(`${message.author}`),
+              allowedMentions: { users: [message.author.id] },
+            })
+            .catch(() => null);
+
+          if (alertMsg) {
+            setTimeout(() => {
+              alertMsg.delete().catch(() => {});
+            }, 5000);
+          }
+        }
+        return;
+      }
+    }
+
     await antiSpamService.handleMessage(message);
   } catch (error) {
-    console.error("Gagal memproses anti-spam pesan:", error);
+    console.error("Gagal memproses pesan:", error);
   }
 });
 
